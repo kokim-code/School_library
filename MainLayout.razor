@@ -1,0 +1,20 @@
+@inherits LayoutComponentBase
+
+<header class="topbar">
+    <div>
+        <strong>Школьная библиотека</strong>
+        <span>WEB-система учета книг</span>
+    </div>
+    <nav>
+        <NavLink href="/" Match="NavLinkMatch.All">Главная</NavLink>
+        <NavLink href="/books">Каталог</NavLink>
+        <NavLink href="/copies">Экземпляры</NavLink>
+        <NavLink href="/readers">Читатели</NavLink>
+        <NavLink href="/loans">Выдача</NavLink>
+        <NavLink href="/transfers">Перемещения</NavLink>
+    </nav>
+</header>
+
+<main class="page">
+    @Body
+</main>

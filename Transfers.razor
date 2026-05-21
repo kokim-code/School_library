@@ -1,0 +1,69 @@
+@page "/transfers"
+@inject TransferService TransferService
+@inject BookCopyService CopyService
+
+<h1>Перемещения книг</h1>
+<p>Раздел показывает историю переноса экземпляров между стеллажами, кабинетами и читальным залом.</p>
+
+@if (!string.IsNullOrWhiteSpace(message)) { <div class="message">@message</div> }
+
+<div class="panel grid-form">
+    <select @bind="copyId">
+        @foreach (var copy in copies) { <option value="@copy.Id">@copy.InventoryNumber - @copy.Book?.Title</option> }
+    </select>
+    <select @bind="toLocationId">
+        @foreach (var location in locations) { <option value="@location.Id">@location.Name</option> }
+    </select>
+    <input @bind="comment" placeholder="Комментарий" />
+    <button @onclick="Move">Переместить</button>
+</div>
+
+<table>
+    <thead><tr><th>Дата</th><th>Экземпляр</th><th>Книга</th><th>Откуда</th><th>Куда</th><th>Комментарий</th></tr></thead>
+    <tbody>
+    @foreach (var transfer in transfers)
+    {
+        <tr>
+            <td>@transfer.TransferDate.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+            <td>@transfer.BookCopy?.InventoryNumber</td>
+            <td>@transfer.BookCopy?.Book?.Title</td>
+            <td>@transfer.FromLocation?.Name</td>
+            <td>@transfer.ToLocation?.Name</td>
+            <td>@transfer.Comment</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@code {
+    private List<Transfer> transfers = [];
+    private List<BookCopy> copies = [];
+    private List<StorageLocation> locations = [];
+    private int copyId;
+    private int toLocationId;
+    private string? comment;
+    private string? message;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        transfers = await TransferService.GetAllAsync();
+        copies = await CopyService.GetAllAsync();
+        locations = await CopyService.GetLocationsAsync();
+        copyId = copies.FirstOrDefault()?.Id ?? 0;
+        toLocationId = locations.FirstOrDefault()?.Id ?? 0;
+    }
+
+    private async Task Move()
+    {
+        try
+        {
+            await TransferService.MoveAsync(copyId, toLocationId, comment);
+            message = "Перемещение сохранено";
+            comment = null;
+            await Load();
+        }
+        catch (Exception ex) { message = ex.Message; }
+    }
+}

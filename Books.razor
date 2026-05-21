@@ -1,0 +1,78 @@
+@page "/books"
+@inject BookService BookService
+
+<h1>Каталог книг</h1>
+<p>Раздел предназначен для поиска и регистрации изданий в фонде библиотеки.</p>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="message">@message</div>
+}
+
+<div class="panel">
+    <label>Поиск</label>
+    <input @bind="query" @bind:event="oninput" placeholder="Название, автор или ISBN" />
+    <button @onclick="Load">Найти</button>
+</div>
+
+<EditForm Model="newBook" OnValidSubmit="AddBook" class="panel grid-form">
+    <InputText @bind-Value="newBook.Title" placeholder="Название" />
+    <InputText @bind-Value="newBook.Isbn" placeholder="ISBN" />
+    <InputNumber @bind-Value="newBook.PublishYear" placeholder="Год" />
+    <InputSelect @bind-Value="newBook.AuthorId">
+        @foreach (var author in authors) { <option value="@author.Id">@author.FullName</option> }
+    </InputSelect>
+    <InputSelect @bind-Value="newBook.GenreId">
+        @foreach (var genre in genres) { <option value="@genre.Id">@genre.Name</option> }
+    </InputSelect>
+    <button type="submit">Добавить книгу</button>
+</EditForm>
+
+<table>
+    <thead><tr><th>Название</th><th>Автор</th><th>Жанр</th><th>ISBN</th><th>Год</th><th>Экз.</th></tr></thead>
+    <tbody>
+    @foreach (var book in items)
+    {
+        <tr>
+            <td>@book.Title</td>
+            <td>@book.Author?.FullName</td>
+            <td>@book.Genre?.Name</td>
+            <td>@book.Isbn</td>
+            <td>@book.PublishYear</td>
+            <td>@book.Copies.Count</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@code {
+    private List<Book> items = [];
+    private List<Author> authors = [];
+    private List<Genre> genres = [];
+    private string? query;
+    private string? message;
+    private Book newBook = new() { PublishYear = DateTime.Today.Year };
+
+    protected override async Task OnInitializedAsync()
+    {
+        authors = await BookService.GetAuthorsAsync();
+        genres = await BookService.GetGenresAsync();
+        newBook.AuthorId = authors.FirstOrDefault()?.Id ?? 0;
+        newBook.GenreId = genres.FirstOrDefault()?.Id ?? 0;
+        await Load();
+    }
+
+    private async Task Load() => items = await BookService.SearchAsync(query);
+
+    private async Task AddBook()
+    {
+        try
+        {
+            await BookService.AddAsync(newBook);
+            message = "Книга добавлена";
+            newBook = new Book { PublishYear = DateTime.Today.Year, AuthorId = authors.First().Id, GenreId = genres.First().Id };
+            await Load();
+        }
+        catch (Exception ex) { message = ex.Message; }
+    }
+}

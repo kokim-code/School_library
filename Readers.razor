@@ -1,0 +1,51 @@
+@page "/readers"
+@inject ReaderService ReaderService
+
+<h1>Читатели</h1>
+<p>Раздел хранит сведения об учениках, учителях и сотрудниках, которым могут выдаваться книги.</p>
+
+@if (!string.IsNullOrWhiteSpace(message)) { <div class="message">@message</div> }
+
+<EditForm Model="newReader" OnValidSubmit="AddReader" class="panel grid-form">
+    <InputText @bind-Value="newReader.FullName" placeholder="ФИО" />
+    <InputSelect @bind-Value="newReader.ReaderType">
+        <option>Ученик</option>
+        <option>Учитель</option>
+        <option>Сотрудник</option>
+    </InputSelect>
+    <InputText @bind-Value="newReader.ClassName" placeholder="Класс" />
+    <InputText @bind-Value="newReader.Phone" placeholder="Телефон" />
+    <button type="submit">Добавить читателя</button>
+</EditForm>
+
+<table>
+    <thead><tr><th>ФИО</th><th>Тип</th><th>Класс</th><th>Телефон</th></tr></thead>
+    <tbody>
+    @foreach (var reader in items)
+    {
+        <tr><td>@reader.FullName</td><td>@reader.ReaderType</td><td>@reader.ClassName</td><td>@reader.Phone</td></tr>
+    }
+    </tbody>
+</table>
+
+@code {
+    private List<Reader> items = [];
+    private Reader newReader = new();
+    private string? message;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load() => items = await ReaderService.GetAllAsync();
+
+    private async Task AddReader()
+    {
+        try
+        {
+            await ReaderService.AddAsync(newReader);
+            message = "Читатель добавлен";
+            newReader = new Reader();
+            await Load();
+        }
+        catch (Exception ex) { message = ex.Message; }
+    }
+}

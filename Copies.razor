@@ -1,0 +1,74 @@
+@page "/copies"
+@inject BookCopyService CopyService
+
+<h1>Экземпляры книг</h1>
+<p>Здесь ведется учет физических экземпляров с инвентарными номерами, статусами и местами хранения.</p>
+
+@if (!string.IsNullOrWhiteSpace(message)) { <div class="message">@message</div> }
+
+<EditForm Model="newCopy" OnValidSubmit="AddCopy" class="panel grid-form">
+    <InputText @bind-Value="newCopy.InventoryNumber" placeholder="Инвентарный номер" />
+    <InputSelect @bind-Value="newCopy.BookId">
+        @foreach (var book in books) { <option value="@book.Id">@book.Title</option> }
+    </InputSelect>
+    <InputSelect @bind-Value="newCopy.StorageLocationId">
+        @foreach (var location in locations) { <option value="@location.Id">@location.Name</option> }
+    </InputSelect>
+    <button type="submit">Добавить экземпляр</button>
+</EditForm>
+
+<table>
+    <thead><tr><th>Инвентарный номер</th><th>Книга</th><th>Автор</th><th>Статус</th><th>Место хранения</th></tr></thead>
+    <tbody>
+    @foreach (var copy in items)
+    {
+        <tr>
+            <td>@copy.InventoryNumber</td>
+            <td>@copy.Book?.Title</td>
+            <td>@copy.Book?.Author?.FullName</td>
+            <td>@StatusText(copy.Status)</td>
+            <td>@copy.StorageLocation?.Name</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@code {
+    private List<BookCopy> items = [];
+    private List<Book> books = [];
+    private List<StorageLocation> locations = [];
+    private BookCopy newCopy = new();
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        books = await CopyService.GetBooksAsync();
+        locations = await CopyService.GetLocationsAsync();
+        newCopy.BookId = books.FirstOrDefault()?.Id ?? 0;
+        newCopy.StorageLocationId = locations.FirstOrDefault()?.Id ?? 0;
+        await Load();
+    }
+
+    private async Task Load() => items = await CopyService.GetAllAsync();
+
+    private async Task AddCopy()
+    {
+        try
+        {
+            await CopyService.AddAsync(newCopy);
+            message = "Экземпляр добавлен";
+            newCopy = new BookCopy { BookId = books.First().Id, StorageLocationId = locations.First().Id };
+            await Load();
+        }
+        catch (Exception ex) { message = ex.Message; }
+    }
+
+    private static string StatusText(CopyStatus status) => status switch
+    {
+        CopyStatus.Available => "Доступна",
+        CopyStatus.Issued => "Выдана",
+        CopyStatus.Lost => "Утеряна",
+        CopyStatus.Repair => "Ремонт",
+        _ => status.ToString()
+    };
+}
